@@ -29,17 +29,17 @@ class user extends Eloquent
     public static function userCheck($input)
     {
         $model = new self();
-        $name = $model->name = $input['userName'];
+        $model->name = $input['userName'];
         $emailId = $model->userId = $input['userID'];
         $authenticationType = $model->auth_type = $input['authType'];
-        $snsHandle = $model->snsHandle = $input['password'];
+        $model->snsHandle = $input['password'];
         $platform = $model->clientPlf = $input['clientPlf'];
         $model->imageUrl = $input['imageUrl'];
         $device_model = $model->deviceType = $input['deviceType'];
         $model->appVersion = $input['appVersion'];
         $model->uniqueDeviceID = $input['uniqueDeviceID'];
         $push = $model->pushNotificationID = $input['pushNotificationID'];
-        $location = $model->userLocation = $input['location'];
+        $model->userLocation = $input['location'];
         $array_auth = ['Google', 'LinkedIn', 'Facebook', 'Email', 'Guest'];
         $array_plt = ['android', 'ios', 'webApp', 'Guest'];
         $array_device = ['smartphone', 'tablet', 'Guest'];
@@ -56,15 +56,20 @@ class user extends Eloquent
         if (!in_array($device_model, $array_device)) {
             return array("status" => "failure", "resultCode" => "1", "message" => "Incorrect device ");
         }
+
+
+        // Guest Login
+
+
         if ($authenticationType == "Guest") {
             $model->name = "";
-            $emailId = $model->userId = "";
+            $model->userId = "";
             $authenticationType = $model->auth_type = "";
-            $snsHandle = $model->snsHandle = "";
+            $model->snsHandle = "";
             $model->userType = "Guest";
-            $platform = $model->clientPlf = "";
+            $model->clientPlf = "";
             $model->imageUrl = "http://blog.ramboll.com/fehmarnbelt/wp-content/themes/ramboll2/images/profile-img.jpg";
-            $device_model = $model->deviceType = $input['deviceType'];
+            $model->deviceType = $input['deviceType'];
             $model->appVersion = $input['appVersion'];
             $model->uniqueDeviceID = $input['uniqueDeviceID'];
             $model->pushNotificationID = $input['pushNotificationID'];
@@ -76,43 +81,30 @@ class user extends Eloquent
                 if (!isset($users) || count($users) == 0) {
                     $model->liked = array();
                     $model->feedCount = 0;
-                    $uniqueID = $model->usrSessionHdl = "Guest";
+                    $model->usrSessionHdl = "Guest";
                     $model->save();
                     $date = $model['created_at'];
-                    return array("status" => "success", "resultCode" => "1", "userType" => "Guest", "message" => "New user created", "sessionHandle" => "Guest",  'createdAt' => $date);
+                    Log::info("New guest user created with " . $input['uniqueDeviceID']);
+                    return array("status" => "success", "resultCode" => "1", "userType" => "Guest", "message" => "New user created", "sessionHandle" => "Guest", 'createdAt' => $date);
                 } else {
-
-
-                    return array("status" => "success", "resultCode" => "1", "userType" => "Guest", "message" => "User Already Present", "sessionHandle" => "Guest",  'createdAt' => $users['created_at']);
-
-
+                    $users->pushNotificationID = $input['pushNotificationID'];
+                    $users->save();
+                    Log::info("Exist user ID " . $input['uniqueDeviceID']);
+                    return array("status" => "success", "resultCode" => "1", "userType" => "Guest", "message" => "User Already Present", "sessionHandle" => "Guest", 'createdAt' => $users['created_at']);
                 }
             }
 
+            // Proper user login
+
+
         } else {
-
-
             $uniqueID = $model->usrSessionHdl = uniqid();
             $users = $model::where('userId', '=', $emailId)->first();
-            $idUser = $model::where('uniqueDeviceID', '=', $input['uniqueDeviceID'])->first();
 
+            // For new user
 
             if (!isset($users) || count($users) == 0) {
                 $model->liked = array();
-                if (in_array($emailId, $testEmailArray)) {
-                    $model->userType="Test";
-                    $userType="Test";
-                }
-                else{
-                    $model->userType="Normal";
-                    $userType="Normal";
-                }
-
-                $model->save();
-                return array("status" => "success", "resultCode" => "01", "userType" => $userType, "message" => "New user created", "sessionHandle" => $uniqueID,);
-
-
-            } else {
                 if (in_array($emailId, $testEmailArray)) {
                     $model->userType = "Test";
                     $userType = "Test";
@@ -120,11 +112,21 @@ class user extends Eloquent
                     $model->userType = "Normal";
                     $userType = "Normal";
                 }
+                $model->save();
+                Log::info("New proper user created with " . $input['uniqueDeviceID'] . "and user handle " . $uniqueID);
+                return array("status" => "success", "resultCode" => "01", "userType" => $userType, "message" => "New user created", "sessionHandle" => $uniqueID,);
+            } // Existing User
 
 
-                    $userHandle = $users['usrSessionHdl'];
-
-
+            else {
+                if (in_array($emailId, $testEmailArray)) {
+                    $model->userType = "Test";
+                    $userType = "Test";
+                } else {
+                    $model->userType = "Normal";
+                    $userType = "Normal";
+                }
+                $userHandle = $users['usrSessionHdl'];
                 $new = $model::where('userId', '=', $emailId)->first();
                 $new->pushNotificationID = $push;
                 $new->name = $input['userName'];
@@ -138,8 +140,7 @@ class user extends Eloquent
                 $new->appVersion = $input['appVersion'];
                 $new->uniqueDeviceID = $input['uniqueDeviceID'];
                 $new->save();
-
-
+                Log::info("Existing user  " . $input['uniqueDeviceID'] . "and user handle " . $userHandle);
                 return array("status" => "success", "resultCode" => "01", "userType" => $userType, "message" => "User already present", "sessionHandle" => $userHandle);
 
 
