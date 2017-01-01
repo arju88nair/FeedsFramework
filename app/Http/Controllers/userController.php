@@ -108,4 +108,13 @@ class userController extends Controller
 
 
 
+    public function admin(){
+
+        return view('login');
+
+    }
+
+
+
+
 }

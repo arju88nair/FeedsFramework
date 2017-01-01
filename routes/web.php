@@ -32,3 +32,10 @@ Route::post('addCategories', 'userController@addCategories');
 
 Route::post('postComments', 'userController@comments');
 
+
+
+// Web Routes
+
+
+Route::get('loginAdmin','userController@admin');
+
